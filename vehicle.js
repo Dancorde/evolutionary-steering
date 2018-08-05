@@ -9,8 +9,14 @@ function Vehicle(x, y){
   this.health = 1;
 
   this.dna = [];
-  this.dna[0] = random(-5, 5);
-  this.dna[1] = random(-5, 5);
+  // Food weight
+  this.dna[0] = random(-2, 2);
+  // Poisson weight
+  this.dna[1] = random(-2, 2);
+  // Food perception
+  this.dna[2] = random(0, 100);
+  // Food perception
+  this.dna[3] = random(0, 100);
 
   // Method to update location
   this.update = function(){
@@ -35,8 +41,8 @@ function Vehicle(x, y){
   }
 
   this.behaviors = function(good, bad) {
-    var steerG = this.eat(good, 0.1);
-    var steerB = this.eat(bad, -0.1);
+    var steerG = this.eat(good, 0.1, this.dna[2]);
+    var steerB = this.eat(bad, -0.1, this.dna[3]);
 
     steerG.mult(this.dna[0]);
     steerB.mult(this.dna[1]);
@@ -45,26 +51,30 @@ function Vehicle(x, y){
     this.applyForce(steerB);
   }
 
-  this.eat = function(list, nutrition){
+  this.eat = function(list, nutrition, perception){
     // What's the closest?
     var closestD = Infinity
-    var closest = -1;
+    var closest = null;
 
-    for (var i = 0; i < list.length; i++) {
+    for (var i = list.length-1; i >= 0; i--) {
       // Calculate distance
       var d = this.position.dist(list[i]);
-      if(d < closestD){
-        closestD = d;
-        closest = i;
+
+      if (d < this.maxspeed ) {
+        list.splice(i, 1);
+        this.health += nutrition;
+      } else {
+        if(d < closestD && d < perception){
+          closestD = d;
+          closest = list[i];
+        }
       }
+
 
     }
     // If we're withing 5 pixels, eat it!
-    if (closestD < 5) {
-      list.splice(closest, 1);
-      this.health += nutrition;
-    } else if(closest > -1){
-      return this.seek(list[closest]);
+    if(closest != null){
+      return this.seek(closest);
     }
 
     return createVector(0, 0);
@@ -97,7 +107,22 @@ function Vehicle(x, y){
     translate(this.position.x, this.position.y);
     rotate(theta);
 
-        // Draw the vehicle itself
+    noFill();
+
+
+    strokeWeight(3);
+    // Circle and line for food
+    stroke(0, 255, 0);
+    ellipse(0, 0, this.dna[2] * 2);
+    line(0, 0, 0, -this.dna[0] * 25);
+    strokeWeight(2);
+
+    // Circle and line for poison
+    stroke(255, 0, 0);
+    ellipse(0, 0, this.dna[3] * 2);
+    line(0, 0, 0, -this.dna[1] * 25);
+
+    // Draw the vehicle itself
     fill(col);
     stroke(col);
     beginShape();
@@ -107,4 +132,28 @@ function Vehicle(x, y){
     endShape(CLOSE);
     pop();
   }
+
+  this.boundaries = function() {
+    var d = 25;
+    var desired = null;
+    if (this.position.x < d) {
+      desired = createVector(this.maxspeed, this.velocity.y);
+    } else if (this.position.x > width - d) {
+      desired = createVector(-this.maxspeed, this.velocity.y);
+    }
+
+    if (this.position.y < d) {
+      desired = createVector(this.velocity.x, this.maxspeed);
+    } else if (this.position.y > height - d) {
+      desired = createVector(this.velocity.x, -this.maxspeed);
+    }
+
+    if (desired !== null) {
+      desired.setMag(this.maxspeed);
+      var steer = p5.Vector.sub(desired, this.velocity);
+      steer.limit(this.maxforce);
+      this.applyForce(steer);
+    }
+  }
+
 }

@@ -1,24 +1,40 @@
-var vehicle;
+var vehicles = [];
 var food = [];
 var poison = [];
 
 function setup() {
-  createCanvas(windowWidth, windowHeight);
-  vehicle = new Vehicle(windowWidth/2, windowHeight/2);
+  createCanvas(640, 480);
+
   for (var i = 0; i < 10; i++) {
-    var x = random(windowWidth);
-    var y = random(windowHeight);
+    var x = random(width);
+    var y = random(height);
+    vehicles[i] = new Vehicle(x, y);
+  }
+  for (var i = 0; i < 50; i++) {
+    var x = random(width);
+    var y = random(height);
     food.push(createVector(x, y));
   }
   for (var i = 0; i < 10; i++) {
-    var x = random(windowWidth);
-    var y = random(windowHeight);
+    var x = random(width);
+    var y = random(height);
     poison.push(createVector(x, y));
   }
 }
 
 function draw() {
   background(51);
+
+  if (random(1) < 0.05) {
+    var x = random(width);
+    var y = random(height);
+    food.push(createVector(x, y));
+  }
+  if (random(1) < 0.05) {
+    var x = random(width);
+    var y = random(height);
+    poison.push(createVector(x, y));
+  }
 
   for (var i = 0; i < food.length; i++) {
     fill(0, 255, 0);
@@ -32,9 +48,12 @@ function draw() {
     ellipse(poison[i].x, poison[i].y, 8, 8);
   }
 
-  vehicle.eat(food);
-  vehicle.eat(poison);
-  // vehicle.seek(target);
-  vehicle.update();
-  vehicle.display();
+  for (var i = vehicles.length-1; i >= 0 ; i--) {
+    vehicles[i].behaviors(food, poison);
+    vehicles[i].update();
+    vehicles[i].display();
+    if (vehicles[i].dead()) {
+      vehicles.splice(i, 1);
+    }
+  }
 }

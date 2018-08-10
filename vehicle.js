@@ -1,159 +1,209 @@
-function Vehicle(x, y){
-  this.acceleration = createVector(0, 0);
-  this.velocity = createVector(0, -2);
-  this.position = createVector(x, y);
-  this.r = 3;
-  this.maxspeed = 5;
-  this.maxforce = 0.5;
+// The "Vehicle" class
+class Vehicle {
 
-  this.health = 1;
+  constructor(x, y, dna) {  
+    this.acceleration = createVector(0, 0);
+    this.velocity = createVector(0, -2);
+    this.position = createVector(x, y);
+    this.r = 3;
+    this.health = 2;
+    this.age = round(millis() / 1000);
 
-  this.dna = [];
-  // Food weight
-  this.dna[0] = random(-2, 2);
-  // Poisson weight
-  this.dna[1] = random(-2, 2);
-  // Food perception
-  this.dna[2] = random(0, 100);
-  // Food perception
-  this.dna[3] = random(0, 100);
+    if (dna === undefined) {
+      this.dna = [
+        random(-2, 2),  // food weight
+        random(-2, 2),  // poison weight
+        random(0, 100), // food perception
+        random(0, 100)  // poison perception
+      ];
+    }
+    else {
+      this.dna = [
+        random(1)<mutation_rate?dna[0] + random(-food_attract, food_attract):dna[0],
+        random(1)<mutation_rate?dna[1] + random(-poison_attract, poison_attract):dna[1],
+        random(1)<mutation_rate?dna[2] + random(-food_percept, food_percept):dna[2],
+        random(1)<mutation_rate?dna[3] + random(-poison_percept, poison_percept):dna[3]
+      ];
+    }
+  } // end of constructor()
 
   // Method to update location
-  this.update = function(){
-    this.health -= 0.002;
-    // Update velocity
+  update() {
+
+    //this.health -= health_tick;
+
+    // Update velocity, and limit it
     this.velocity.add(this.acceleration);
-    // Limit speed
-    this.velocity.limit(this.maxspeed);
+    this.velocity.limit(max_speed);
+
+    // Update position, and limit it
     this.position.add(this.velocity);
-    // Reset acceleration to 0 each cycle
+    this.position.x = constrain(this.position.x, 0, width);
+    this.position.y = constrain(this.position.y, 0, height);
+
+    // Reset accelerationelertion to 0 each cycle
     this.acceleration.mult(0);
   }
 
-  // Return true if health is less than zero
-  this.dead = function() {
-    return (this.health < 0);
-  }
-
-  // Add force to acceleration
-  this.applyForce = function(force){
+  applyForce(force) {
+    // We could add mass here if we want A = F / M
     this.acceleration.add(force);
   }
 
-  this.behaviors = function(good, bad) {
-    var steerG = this.eat(good, 0.1, this.dna[2]);
-    var steerB = this.eat(bad, -0.1, this.dna[3]);
+  behaviors(good, bad) {
+    // Get the steering forces from eat, which gets them from seek
+    let attraction = this.eat(good, food_value, this.dna[2]);
+    let repulsion = this.eat(bad, poison_value, this.dna[3]);
 
-    steerG.mult(this.dna[0]);
-    steerB.mult(this.dna[1]);
+    // Scale the steering forces via. DNA
+    attraction.mult(this.dna[0]);
+    repulsion.mult(this.dna[1]);
 
-    this.applyForce(steerG);
-    this.applyForce(steerB);
+    this.applyForce(attraction);
+    this.applyForce(repulsion);
   }
 
-  this.eat = function(list, nutrition, perception){
-    // What's the closest?
-    var closestD = Infinity
-    var closest = null;
+  clone() {
+    return new Vehicle(this.position.x, this.position.y, this.dna);
+  }
 
-    for (var i = list.length-1; i >= 0; i--) {
-      // Calculate distance
-      var d = this.position.dist(list[i]);
+  eat(targets, nutrition, perception) {
+    let record = Infinity;
+    let closest = null;
 
-      if (d < this.maxspeed ) {
-        list.splice(i, 1);
+    // Loop through all targets
+    for (let i = targets.length-1; i >= 0; i--) {
+      let d = this.position.dist(targets[i]);
+      // Moment of eating
+      if (d < max_speed) {
+        // Destroy target, and apply nutrition factor
+        targets.splice(i, 1);
         this.health += nutrition;
-      } else {
-        if(d < closestD && d < perception){
-          closestD = d;
-          closest = list[i];
-        }
       }
-
-
+      // Find the closest target that can be perceived
+      else if (d < record && d < perception) {
+        record = d;
+        closest = targets[i];
+      }
     }
-    // If we're withing 5 pixels, eat it!
-    if(closest != null){
+
+    if (closest != null) {
+      // Steer towards that target
       return this.seek(closest);
     }
 
+    // Target not found, etc.
     return createVector(0, 0);
-  }
+  } // end of eat()
 
   // A method that calculates a steering force towards a target
   // STEER = DESIRED MINUS VELOCITY
-  this.seek = function(target){
-    var desired = p5.Vector.sub(target, this.position); // A vector pointing from the location to the target
+  seek(target) {
+
+    let desired = p5.Vector.sub(target, this.position);  // A vector pointing from the location to the target
 
     // Scale to maximum speed
-    desired.setMag(this.maxspeed);
+    desired.setMag(max_speed);
 
     // Steering = Desired minus velocity
-    var steer = p5.Vector.sub(desired, this.velocity);
-    steer.limit(this.maxforce); // Limit to maximum steering force
+    let steer = p5.Vector.sub(desired, this.velocity);
+    steer.limit(max_force);  // Limit to maximum steering force
 
     return steer;
+    //this.applyForce(steer);
   }
 
-  this.display = function(){
-    // Color based on health
-    var green = color(0, 255, 0);
-    var red = color(255, 0, 0);
-    var col = lerpColor(red, green, this.health)
+  dead() {
+    return (this.health < 0);
+  }
 
-    // Draw a triangle rotated in the direction of velocity
-    var theta = this.velocity.heading() + PI / 2;
+  // Draw a triangle rotated in the direction of velocity
+  display(isBest) {
+
+    let dna_food_attract = this.dna[0]*20;
+    let dna_poison_attract = this.dna[1]*20;
+    let dna_food_percept = this.dna[2]*2;
+    let dna_poison_percept = this.dna[3]*2;
+
+    let theta = this.velocity.heading() + PI/2;
+    let rd = color(255, 0, 0);
+    let grn = color(0, 255, 0);
+    let purp = color(255, 0, 255);
+    let deadColor = isBest?color(0):rd;
+    let aliveColor = isBest?color(255):grn;
+    let col = lerpColor(deadColor, aliveColor, this.health);
+
     push();
-    translate(this.position.x, this.position.y);
-    rotate(theta);
 
-    noFill();
-
-
-    strokeWeight(3);
-    // Circle and line for food
-    stroke(0, 255, 0);
-    ellipse(0, 0, this.dna[2] * 2);
-    line(0, 0, 0, -this.dna[0] * 25);
-    strokeWeight(2);
-
-    // Circle and line for poison
-    stroke(255, 0, 0);
-    ellipse(0, 0, this.dna[3] * 2);
-    line(0, 0, 0, -this.dna[1] * 25);
-
-    // Draw the vehicle itself
     fill(col);
-    stroke(col);
-    beginShape();
-    vertex(0, -this.r * 2);
-    vertex(-this.r, this.r * 2);
-    vertex(this.r, this.r * 2);
-    endShape(CLOSE);
-    pop();
-  }
+    stroke(0);
+    strokeWeight(1);
+    translate(this.position.x,this.position.y);
 
-  this.boundaries = function() {
-    var d = 25;
-    var desired = null;
+    if (debug.checked()) {
+      textSize(9);
+      text(this.health.toFixed(2) + '', 10, 10)
+    }
+
+    rotate(theta);
+    beginShape();
+    vertex(0, -this.r*2);
+    vertex(-this.r, this.r*2);
+    vertex(this.r, this.r*2);
+    endShape(CLOSE);
+
+    if (debug.checked()) {
+      dna_food_percept = dna_food_percept<0? 0 : dna_food_percept;
+      dna_poison_percept = dna_poison_percept<0? 0 : dna_poison_percept;
+
+      stroke(grn);
+      strokeWeight(1);
+      line(-1, -1, -1, -dna_food_attract);
+      noFill();
+      ellipse(0, 0, dna_food_percept);
+      stroke(rd);
+      strokeWeight(1);
+      line(1, 1, 1, -dna_poison_attract);
+      ellipse(0, 0, dna_poison_percept);
+    }
+
+    if (isBest) {
+      noStroke();
+      fill(0, 255, 0, 20);
+      ellipse(0, 0, dna_food_percept);
+      fill(255, 0, 0, 20);
+      ellipse(0, 0, dna_poison_percept);
+    }
+
+    pop();
+  } // end of display()
+
+  boundaries() {
+
+    let d = 1;
+    let desired = null;
+
     if (this.position.x < d) {
-      desired = createVector(this.maxspeed, this.velocity.y);
-    } else if (this.position.x > width - d) {
-      desired = createVector(-this.maxspeed, this.velocity.y);
+      desired = createVector(max_speed, this.velocity.y);
+    }
+    else if (this.position.x > width -d) {
+      desired = createVector(-max_speed, this.velocity.y);
     }
 
     if (this.position.y < d) {
-      desired = createVector(this.velocity.x, this.maxspeed);
-    } else if (this.position.y > height - d) {
-      desired = createVector(this.velocity.x, -this.maxspeed);
+      desired = createVector(this.velocity.x, max_speed);
+    }
+    else if (this.position.y > height-d) {
+      desired = createVector(this.velocity.x, -max_speed);
     }
 
     if (desired !== null) {
-      desired.setMag(this.maxspeed);
-      var steer = p5.Vector.sub(desired, this.velocity);
-      steer.limit(this.maxforce);
+      desired.normalize();
+      desired.mult(max_speed);
+      let steer = p5.Vector.sub(desired, this.velocity);
+      steer.limit(max_force);
       this.applyForce(steer);
     }
-  }
+  } // end of boundaries()
 
-}
+} // end of Vehicle class

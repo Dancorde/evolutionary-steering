@@ -1,114 +1,95 @@
-var vehicles = [];
-var food = [];
-var poison = [];
-var predators = [];
-
-var debug;
-
 function setup() {
-  createCanvas(windowWidth, windowHeight);
-  for (var i = 0; i < 100; i++) {
-    var x = random(width);
-    var y = random(height);
-    vehicles[i] = new Vehicle(x, y);
-  }
 
-  for (var i = 0; i < 10; i++) {
-    var x = random(width);
-    var y = random(height);
-    predators[i] = new Predator(x, y);
-  }
+  frameRate(32);
 
-  for (var i = 0; i < 40; i++) {
-    var x = random(width);
-    var y = random(height);
+  drawMainLayout();
+  updateSliders();
+
+  // CREATE STARTING FOOD
+  for (let i = 0; i < food_amt; i++) {
+    let x = random(width);
+    let y = random(height);
     food.push(createVector(x, y));
   }
 
-  // for (var i = 0; i < 20; i++) {
-  //     var x = random(width);
-  //     var y = random(height);
-  //     poison.push(createVector(x, y));
-  // }
+  // CREATE STARTING POISON
+  for (let i = 0; i < poison_amt; i++) {
+    let x = random(width);
+    let y = random(height);
+    poison.push(createVector(x, y));
+  }
 
-  debug = createCheckbox();
-}
+  // CREATE STARTING VEHICLES
+  for (let i = 0; i < v_amt; i++) {
+    let x = random(width);
+    let y = random(height);
+    v[i] = new Vehicle(x, y);
+  }
 
-function mouseDragged() {
-  vehicles.push(new Vehicle(mouseX, mouseY));
+  // UPDATE PER SLIDER VALUES
+  setTimeout(foodRate, food_rate);
+  setTimeout(poisonRate, poison_rate);
+  setTimeout(reproductionRate, reproduction_rate);
+
+  // ONCE PER SECOND
+  setInterval(healthTick, 1000);
+  setInterval(updateStats, 1000);
+
 }
 
 function draw() {
   background(51);
 
-  if (random(1) < 0.1) {
-      var x = random(width);
-      var y = random(height);
+  // DRAW EACH FOOD
+  for (let i = 0; i < food.length; i++) {
+    fill(0, 255, 0);
+    noStroke();
+    ellipse(food[i].x, food[i].y, target_radius, target_radius);
+  }
+
+  // DRAW EACH POISON
+  for (let i = 0; i < poison.length; i++) {
+    fill(255, 0, 0);
+    noStroke();
+    ellipse(poison[i].x, poison[i].y, target_radius, target_radius);
+  }
+
+  let bestHealth = 0;
+  let thisBestIndex;
+
+  // VEHICLES LOOP
+  for (let i = v.length-1; i >= 0; i--) {
+    let vhealth = v[i].health;
+
+    // Call the appropriate steering behaviors for our agents
+    if (v[i].dead()) {
+
+      if (i == best_health_index) {
+        thisBestIndex = 0;
+      }
+
+      // Agent is dead
+      let x = v[i].position.x;
+      let y = v[i].position.y;
       food.push(createVector(x, y));
-  }
-
-  // if (random(1) < 0.01) {
-  //     var x = random(width);
-  //     var y = random(height);
-  //     poison.push(createVector(x, y));
-  // }
-
-
-  for (var i = 0; i < food.length; i++) {
-      fill(0, 255, 0);
-      noStroke();
-      ellipse(food[i].x, food[i].y, 4, 4);
-  }
-
-  // for (var i = 0; i < poison.length; i++) {
-  //     fill(255, 0, 0);
-  //     noStroke();
-  //     ellipse(poison[i].x, poison[i].y, 4, 4);
-  // }
-
-  textSize(32);
-  var txt = 'Predators: ' + predators.length;
-  text(txt, 10, 30);
-  var txt = 'Preys: ' + vehicles.length;
-  text(txt, 10, 60);
-
-
-  for (var i = vehicles.length - 1; i >= 0; i--) {
-    vehicles[i].boundaries();
-    vehicles[i].behaviors(food, poison);
-    vehicles[i].update();
-    vehicles[i].display();
-
-    var newVehicle = vehicles[i].clone();
-    if (newVehicle != null) {
-      vehicles.push(newVehicle);
+      v.splice(i, 1);
     }
+    else {
 
-    if (vehicles[i].dead()) {
-      var x = vehicles[i].position.x;
-      var y = vehicles[i].position.y;
-      food.push(createVector(x, y));
-      vehicles.splice(i, 1);
+      if (vhealth > bestHealth) {
+        bestHealth = vhealth;
+        thisBestIndex = i;
+      }
+      // Calculate vehicle's behaviors
+      v[i].boundaries();
+      v[i].behaviors(food, poison);
+      v[i].update();
+
+      // SHOW VEHICLE
+      v[i].display(i==best_health_index);
     }
   }
 
+  best_health_index = thisBestIndex;
 
-  for (var i = predators.length - 1; i >= 0; i--) {
-    predators[i].boundaries();
-    predators[i].behaviors();
-    predators[i].update();
-    predators[i].display();
-    console.log(predators.length);
-
-    var newPredator = predators[i].clone();
-    if (newPredator != null) {
-      predators.push(newPredator);
-    }
-
-    if (predators[i].dead()) {
-      var x = predators[i].position.x;
-      var y = predators[i].position.y;
-      predators.splice(i, 1);
-    }
-  }
-}
+} // END OF DRAW LOOP

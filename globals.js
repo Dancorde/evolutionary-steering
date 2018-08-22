@@ -1,5 +1,4 @@
-let vehicles = [];
-let predators = [];
+let v = [];
 let food = [];
 let poison = [];
 
@@ -206,10 +205,10 @@ function mouseDragged() {
   if (inCanvas()) {
     if (mouseButton == LEFT)
       food.push(createVector(mouseX, mouseY));
-    // if (mouseButton == CENTER)
-    //   v.push(new Vehicle(mouseX, mouseY));
-    // if (mouseButton == RIGHT)
-    //   poison.push(createVector(mouseX, mouseY));
+    if (mouseButton == CENTER)
+      v.push(new Vehicle(mouseX, mouseY));
+    if (mouseButton == RIGHT)
+      poison.push(createVector(mouseX, mouseY));
 
     return false;
   }
@@ -217,8 +216,8 @@ function mouseDragged() {
 
 // HEALTH SLIDER
 function healthTick() {
-  for (let i = 0; i < vehicles.length; i++) {
-    vehicles[i].health -= health_tick;
+  for (let i = 0; i < v.length; i++) {
+    v[i].health -= health_tick;
   }
 }
 
@@ -244,9 +243,9 @@ function poisonRate() {
 
 // REPRODUCTION RATE SLIDER
 function reproductionRate() {
-  let random_v = floor(random(vehicles.length));
-  if (vehicles.length > 0 && reproduction_rate != 0 && vehicles[random_v]) {
-    let newVehicle = vehicles[random_v].clone();
+  let random_v = floor(random(v.length));
+  if (v.length > 0 && reproduction_rate != 0 && v[random_v]) {
+    let newVehicle = v[random_v].clone();
     v.push(newVehicle);
   }
   setTimeout(reproductionRate, reproduction_rate);
@@ -264,8 +263,8 @@ function updateMaxForce() {
 
 // Give all vehicles the same health
 function setHealth(h) {
-  for (let i = 0; i < vehicles.length; i++) {
-    vehicles[i].health = h;
+  for (let i = 0; i < v.length; i++) {
+    v[i].health = h;
   }
 }
 
@@ -296,7 +295,7 @@ function removePoison() {
 
 // REMOVE VEHICLES BUTTON
 function removeVehicles() {
-  vehicles = [];
+  v = [];
 }
 
 // Expand the slider's values to allow different ranges in one
@@ -388,18 +387,18 @@ function updateStats() {
   if (show_stats) {
     let consoledata = '';
 
-    for (let i = 0; i < vehicles.length; i++) {
+    for (let i = 0; i < v.length; i++) {
       colorMode(RGB);
       let grn = color(0, 255, 0);
       let rd = color(255, 0, 0);
-      let col = lerpColor(rd, grn, vehicles[i].health);
+      let col = lerpColor(rd, grn, v[i].health);
       let r = col.levels[0].toString(16);
       let g = col.levels[1].toString(16);
       let b = col.levels[2].toString(16);
       r = (r.length==1?'0'+r:r);
       g = (g.length==1?'0'+g:g);
       b = (b.length==1?'0'+b:b);
-      let age = (round(millis()/1000) - vehicles[i].age);
+      let age = (round(millis()/1000) - v[i].age);
 
       if (i == best_health_index) {
         consoledata += '<span style="background-color:#555555">';
@@ -408,11 +407,11 @@ function updateStats() {
       consoledata += '  v: ' + i +
       '\tage: '+ floor(age/60) + 'm ' + age%60 + 's' +
       '\thealth: <span style="font-weight:bold;color:#'+r+g+b+ '">' +
-      vehicles[i].health.toFixed(2) + '</span>' +
-      '\tfood_attract:  '  +vehicles[i].dna[0].toFixed(2) +
-      '\tpoison_attract:  '+vehicles[i].dna[1].toFixed(2) +
-      '\tfood_percept:    '+floor(vehicles[i].dna[2]) +
-      '\tpoison_percept:  '+floor(vehicles[i].dna[3]) +
+      v[i].health.toFixed(2) + '</span>' +
+      '\tfood_attract:  '  +v[i].dna[0].toFixed(2) +
+      '\tpoison_attract:  '+v[i].dna[1].toFixed(2) +
+      '\tfood_percept:    '+floor(v[i].dna[2]) +
+      '\tpoison_percept:  '+floor(v[i].dna[3]) +
       '  \n';
 
       if (i == best_health_index) {

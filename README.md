@@ -8,6 +8,8 @@ O trabalho é sobre algoritmos genéticos onde foi implementado uma simulação 
 
 Cada triângulo vai perdendo vida ao passar do tempo e deve comer as comidas, bolas verdes, que aumentam sua vida, e temos as bolas vermelhas que são os venenos que ao come-las perde-se vidas.
 
+Acesse o link para ver o projeto rodando: https://dancorde.github.io/evolutionary-steering/
+
 ### Grupo
 
 Danilo Henrique Cordeiro - 691651
